@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLabStore } from '../store/lab';
-import { KeyRound, UserRound, AlertCircle, Monitor } from 'lucide-react';
+import { KeyRound, UserRound, AlertCircle, Monitor, Volume2, VolumeX } from 'lucide-react';
 import { usePurposes } from '../hooks/usePurposes';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,10 +10,12 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [purpose, setPurpose] = useState('internet');
   const [error, setError] = useState('');
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const { login } = useAuth();
   const { purposes } = usePurposes();
   const [isLoading, setIsLoading] = useState(false);
   const labId = useLabStore((state) => state.labId);
+  const [errorAudio] = useState(new Audio('/error.mp3'));
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -29,10 +31,17 @@ export default function Login() {
       await login(admissionNumber, password, purpose, labId!);
     } catch (err) {
       setError('Invalid credentials');
+      if (soundEnabled) {
+        errorAudio.play().catch(console.error);
+      }
       motion.div.animate({ x: [-10, 10, -10, 10, 0] }, { duration: 0.5 });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleSound = () => {
+    setSoundEnabled(!soundEnabled);
   };
 
   return (
@@ -61,6 +70,20 @@ export default function Login() {
           <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-purple-500/20 blur-3xl"></div>
         </motion.div>
       </div>
+
+      {/* Sound Toggle Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={toggleSound}
+        className="fixed top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200"
+      >
+        {soundEnabled ? (
+          <Volume2 className="h-6 w-6 text-white" />
+        ) : (
+          <VolumeX className="h-6 w-6 text-white" />
+        )}
+      </motion.button>
 
       <motion.div 
         initial={{ y: 20, opacity: 0 }}
