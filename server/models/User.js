@@ -43,6 +43,14 @@ const userSchema = new mongoose.Schema({
   creditBalance: {
     type: Number,
     default: 0,
+  },
+  lastLoginAt: {
+    type: Date,
+    default: null,
+  },
+  lastLoginLab: {
+    type: String,
+    default: null,
   }
 }, { timestamps: true });
 

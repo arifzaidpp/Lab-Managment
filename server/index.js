@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
 import sessionRoutes from './routes/sessions.js';
+import labRoutes from './routes/lab.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/labs', labRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

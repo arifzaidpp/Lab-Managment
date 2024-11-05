@@ -4,6 +4,9 @@ interface User {
   id: string;
   admissionNumber: string;
   role: 'admin' | 'user';
+  name: string;
+  class: string;
+  imageUrl?: string;
 }
 
 interface AuthState {
@@ -11,6 +14,7 @@ interface AuthState {
   token: string | null;
   login: (user: User, token: string) => void;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -23,5 +27,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem('token');
     set({ user: null, token: null });
+  },
+  updateUser: (userData: Partial<User>) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, ...userData } : null
+    }));
   },
 }));

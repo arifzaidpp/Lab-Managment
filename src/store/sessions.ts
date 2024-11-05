@@ -4,10 +4,13 @@ interface Session {
   id: string;
   userId: string;
   admissionNumber: string;
+  labId: string;
   startTime: string;
   endTime: string | null;
   duration: number;
   compensation: number;
+  purpose: string;
+  lastActivityTime: string;
 }
 
 interface SessionState {
@@ -16,6 +19,7 @@ interface SessionState {
   startSession: (session: Session) => void;
   endSession: () => void;
   setSessions: (sessions: Session[]) => void;
+  updateLastActivity: () => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -24,4 +28,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   startSession: (session: Session) => set({ activeSession: session }),
   endSession: () => set({ activeSession: null }),
   setSessions: (sessions: Session[]) => set({ sessions }),
+  updateLastActivity: () => set((state) => ({
+    activeSession: state.activeSession
+      ? { ...state.activeSession, lastActivityTime: new Date().toISOString() }
+      : null
+  })),
 }));

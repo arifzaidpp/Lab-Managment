@@ -9,6 +9,9 @@ interface LoginResponse {
     id: string;
     admissionNumber: string;
     role: 'admin' | 'user';
+    name: string;
+    class: string;
+    imageUrl?: string;
   };
 }
 
@@ -17,12 +20,18 @@ export const useAuth = () => {
   const navigate = useNavigate();
   const { login: setAuth, logout: clearAuth } = useAuthStore();
 
-  const login = useCallback(async (admissionNumber: string, password: string, purpose: string) => {
+  const login = useCallback(async (
+    admissionNumber: string, 
+    password: string, 
+    purpose: string,
+    labId: string
+  ) => {
     try {
       const response = await api.post<LoginResponse>('/auth/login', {
         admissionNumber,
         password,
         purpose,
+        labId,
       });
       setAuth(response.user, response.token);
       navigate(response.user.role === 'admin' ? '/admin' : '/user');
@@ -31,10 +40,16 @@ export const useAuth = () => {
     }
   }, [api, setAuth, navigate]);
 
-  const logout = useCallback(() => {
-    clearAuth();
-    navigate('/login');
-  }, [clearAuth, navigate]);
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/sessions/end');
+    } catch (error) {
+      console.error('Error ending session:', error);
+    } finally {
+      clearAuth();
+      navigate('/login');
+    }
+  }, [api, clearAuth, navigate]);
 
   return { login, logout };
 };

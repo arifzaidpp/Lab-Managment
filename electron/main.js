@@ -1,10 +1,23 @@
-import { app, BrowserWindow, globalShortcut, screen } from 'electron';
+import { app, BrowserWindow, globalShortcut, screen, ipcMain } from 'electron';
 import path from 'path';
 import isDev from 'electron-is-dev';
+import Store from 'electron-store';
+import { machineId } from 'node-machine-id';
 
+const store = new Store();
 let mainWindow;
 
-function createWindow() {
+async function getOrCreateLabId() {
+  let labId = store.get('labId');
+  if (!labId) {
+    const id = await machineId();
+    labId = `LAB-${id.substring(0, 8)}`;
+    store.set('labId', labId);
+  }
+  return labId;
+}
+
+async function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   
   mainWindow = new BrowserWindow({
@@ -15,9 +28,16 @@ function createWindow() {
     frame: false,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      enableRemoteModule: true
     }
   });
+
+  // Get or create lab ID before loading the app
+  const labId = await getOrCreateLabId();
+  
+  // Pass lab ID to renderer process
+  global.labId = labId;
 
   mainWindow.loadURL(
     isDev
@@ -27,12 +47,23 @@ function createWindow() {
 
   // Prevent window closing
   mainWindow.on('close', (e) => {
-    e.preventDefault();
+    if (!app.isQuitting) {
+      e.preventDefault();
+      mainWindow.focus();
+    }
+  });
+
+  // Handle app quit
+  app.on('before-quit', () => {
+    app.isQuitting = true;
   });
 
   // Disable Alt+F4
   mainWindow.on('before-quit', (e) => {
-    e.preventDefault();
+    if (!app.isQuitting) {
+      e.preventDefault();
+      mainWindow.focus();
+    }
   });
 
   // Prevent task switching and other system shortcuts
@@ -46,7 +77,10 @@ function createWindow() {
     'Alt+Space',
     'CommandOrControl+Shift+Esc',
     'Alt+Esc',
-    'CommandOrControl+Tab'
+    'CommandOrControl+Tab',
+    'Win+D',
+    'Win+M',
+    'Win+Tab'
   ];
 
   shortcuts.forEach(shortcut => {
@@ -66,7 +100,19 @@ function createWindow() {
   
   // Handle window blur
   mainWindow.on('blur', () => {
-    mainWindow.focus();
+    if (!app.isQuitting) {
+      mainWindow.focus();
+    }
+  });
+
+  // IPC handlers
+  ipcMain.handle('get-lab-id', async () => {
+    return await getOrCreateLabId();
+  });
+
+  ipcMain.handle('set-lab-id', async (event, newLabId) => {
+    store.set('labId', newLabId);
+    return newLabId;
   });
 }
 

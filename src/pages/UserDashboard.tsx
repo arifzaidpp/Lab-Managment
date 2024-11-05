@@ -1,41 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useSession } from '../hooks/useSession';
+import { useAuthStore } from '../store/auth';
 import FloatingTimer from '../components/FloatingTimer';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
 export default function UserDashboard() {
   const { logout } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const { activeSession, startSession, endSession } = useSession();
   const [timeLeft, setTimeLeft] = useState(60);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [warningAudio] = useState(new Audio('/warning.mp3'));
 
   useEffect(() => {
     if (!activeSession) {
-      startSession().catch(console.error);
+      startSession(user?.purpose || 'internet').catch(console.error);
     }
   }, []);
 
-  useEffect(() => {
-    const handleActivity = () => {
-      setLastActivity(Date.now());
-      setShowInactiveWarning(false);
-    };
+  const handleActivity = useCallback(() => {
+    setLastActivity(Date.now());
+    setShowInactiveWarning(false);
+  }, []);
 
+  useEffect(() => {
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
     };
-  }, []);
+  }, [handleActivity]);
 
   useEffect(() => {
     const checkInactivity = setInterval(() => {
       const inactiveTime = Date.now() - lastActivity;
       if (inactiveTime > 50000 && !showInactiveWarning) {
         setShowInactiveWarning(true);
+        if (soundEnabled) {
+          warningAudio.play().catch(console.error);
+        }
       }
       if (inactiveTime > 60000) {
         handleEndSession();
@@ -43,7 +54,7 @@ export default function UserDashboard() {
     }, 1000);
 
     return () => clearInterval(checkInactivity);
-  }, [lastActivity, showInactiveWarning]);
+  }, [lastActivity, showInactiveWarning, soundEnabled]);
 
   useEffect(() => {
     let timer: number;
@@ -72,8 +83,26 @@ export default function UserDashboard() {
     }
   };
 
+  const toggleSound = () => {
+    setSoundEnabled(!soundEnabled);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900">
+      {/* Sound Toggle Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={toggleSound}
+        className="fixed top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200"
+      >
+        {soundEnabled ? (
+          <Volume2 className="h-6 w-6 text-white" />
+        ) : (
+          <VolumeX className="h-6 w-6 text-white" />
+        )}
+      </motion.button>
+
       {/* Floating Timer */}
       {activeSession && (
         <FloatingTimer
@@ -83,29 +112,61 @@ export default function UserDashboard() {
       )}
 
       {/* Inactivity Warning Modal */}
-      {showInactiveWarning && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white/10 border border-white/20 rounded-xl p-8 max-w-md w-full mx-4">
-            <div className="flex items-center justify-center text-yellow-500 mb-4">
-              <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white text-center mb-2">
-              Inactivity Detected
-            </h3>
-            <p className="text-blue-200 text-center mb-6">
-              You will be automatically logged out in {Math.ceil((60000 - (Date.now() - lastActivity)) / 1000)} seconds due to inactivity.
-            </p>
-            <button
-              onClick={() => setShowInactiveWarning(false)}
-              className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-100 py-2 rounded-lg hover:bg-blue-600/30 transition-colors duration-200"
+      <AnimatePresence>
+        {showInactiveWarning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white/10 border border-white/20 rounded-xl p-8 max-w-md w-full mx-4"
             >
-              I'm still here
-            </button>
-          </div>
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  duration: 1,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+                className="flex items-center justify-center text-yellow-500 mb-4"
+              >
+                <AlertTriangle className="h-12 w-12" />
+              </motion.div>
+              <h3 className="text-xl font-bold text-white text-center mb-2">
+                Inactivity Detected
+              </h3>
+              <p className="text-blue-200 text-center mb-6">
+                You will be automatically logged out in {Math.ceil((60000 - (Date.now() - lastActivity)) / 1000)} seconds due to inactivity.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowInactiveWarning(false)}
+                className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-100 py-2 rounded-lg hover:bg-blue-600/30 transition-colors duration-200"
+              >
+                I'm still here
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* User Info */}
+      <div className="fixed bottom-4 left-4 bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
+        <div className="text-white">
+          <p className="text-sm opacity-70">Logged in as</p>
+          <p className="font-semibold">{user?.name}</p>
+          <p className="text-sm text-blue-200">{user?.admissionNumber}</p>
         </div>
-      )}
+      </div>
     </div>
   );
 }

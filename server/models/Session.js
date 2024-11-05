@@ -6,6 +6,10 @@ const sessionSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  labId: {
+    type: String,
+    required: true,
+  },
   admissionNumber: {
     type: String,
     required: true,
@@ -29,7 +33,20 @@ const sessionSchema = new mongoose.Schema({
   compensation: {
     type: Number,
     default: 0,
+  },
+  inactivityCount: {
+    type: Number,
+    default: 0,
+  },
+  lastActivityTime: {
+    type: Date,
+    default: Date.now,
   }
 }, { timestamps: true });
+
+// Index for efficient querying
+sessionSchema.index({ userId: 1, startTime: -1 });
+sessionSchema.index({ labId: 1, startTime: -1 });
+sessionSchema.index({ admissionNumber: 1 });
 
 export default mongoose.model('Session', sessionSchema);
