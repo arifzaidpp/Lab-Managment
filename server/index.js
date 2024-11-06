@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
 import sessionRoutes from './routes/sessions.js';
 import labRoutes from './routes/lab.js';
+import purposeRoutes from './routes/purposes.js';
+import creditRoutes from './routes/credits.js';
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/labs', labRoutes);
+app.use('/api/purposes', purposeRoutes);
+app.use('/api/credits', creditRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

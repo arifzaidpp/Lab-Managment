@@ -7,6 +7,9 @@ interface User {
   name: string;
   class: string;
   imageUrl?: string;
+  totalUsage: number;
+  totalCompensation: number;
+  creditBalance: number;
 }
 
 interface AuthState {

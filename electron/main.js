@@ -1,11 +1,16 @@
 import { app, BrowserWindow, globalShortcut, screen, ipcMain } from 'electron';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import isDev from 'electron-is-dev';
 import Store from 'electron-store';
-import { machineId } from 'node-machine-id';
+import pkg from 'node-machine-id';
+const { machineId } = pkg;
 
 const store = new Store();
 let mainWindow;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function getOrCreateLabId() {
   let labId = store.get('labId');
@@ -27,18 +32,17 @@ async function createWindow() {
     alwaysOnTop: true,
     frame: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true
+      nodeIntegration: false, // Security: Disable nodeIntegration
+      contextIsolation: true, // Security: Enable contextIsolation
+      enableRemoteModule: false, // Security: Disable remote module
+      preload: path.join(__dirname, 'preload.js') // Add preload script
     }
   });
 
   // Get or create lab ID before loading the app
-  const labId = await getOrCreateLabId();
+  await getOrCreateLabId();
   
-  // Pass lab ID to renderer process
-  global.labId = labId;
-
+  // Load the app
   mainWindow.loadURL(
     isDev
       ? 'http://localhost:5173'
@@ -104,16 +108,6 @@ async function createWindow() {
       mainWindow.focus();
     }
   });
-
-  // IPC handlers
-  ipcMain.handle('get-lab-id', async () => {
-    return await getOrCreateLabId();
-  });
-
-  ipcMain.handle('set-lab-id', async (event, newLabId) => {
-    store.set('labId', newLabId);
-    return newLabId;
-  });
 }
 
 app.whenReady().then(createWindow);
@@ -128,4 +122,14 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+// IPC handlers
+ipcMain.handle('get-lab-id', async () => {
+  return await getOrCreateLabId();
+});
+
+ipcMain.handle('set-lab-id', async (_, newLabId) => {
+  store.set('labId', newLabId);
+  return newLabId;
 });
