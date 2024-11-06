@@ -88,13 +88,13 @@ export default function UserDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900">
+    <>
       {/* Sound Toggle Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={toggleSound}
-        className="fixed top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200"
+        className="fixed top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200 z-50"
       >
         {soundEnabled ? (
           <Volume2 className="h-6 w-6 text-white" />
@@ -159,14 +159,17 @@ export default function UserDashboard() {
         )}
       </AnimatePresence>
 
-      {/* User Info */}
-      <div className="fixed bottom-4 left-4 bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
-        <div className="text-white">
-          <p className="text-sm opacity-70">Logged in as</p>
-          <p className="font-semibold">{user?.name}</p>
-          <p className="text-sm text-blue-200">{user?.admissionNumber}</p>
+      {/* User Info Overlay */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed bottom-4 left-4 bg-black/40 backdrop-blur-sm rounded-lg p-3 border border-white/10 z-50"
+      >
+        <div className="text-white text-sm">
+          <span className="opacity-70">Logged in as </span>
+          <span className="font-medium">{user?.name}</span>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </>
   );
 }

@@ -32,17 +32,15 @@ async function createWindow() {
     alwaysOnTop: true,
     frame: false,
     webPreferences: {
-      nodeIntegration: false, // Security: Disable nodeIntegration
-      contextIsolation: true, // Security: Enable contextIsolation
-      enableRemoteModule: false, // Security: Disable remote module
-      preload: path.join(__dirname, 'preload.js') // Add preload script
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
-  // Get or create lab ID before loading the app
   await getOrCreateLabId();
   
-  // Load the app
   mainWindow.loadURL(
     isDev
       ? 'http://localhost:5173'
@@ -70,21 +68,9 @@ async function createWindow() {
     }
   });
 
-  // Prevent task switching and other system shortcuts
+  // Block all keyboard shortcuts that could bypass the application
   const shortcuts = [
     'Alt+Tab',
-    'Alt+F4',
-    'CommandOrControl+Q',
-    'Super+D',
-    'CommandOrControl+M',
-    'F11',
-    'Alt+Space',
-    'CommandOrControl+Shift+Esc',
-    'Alt+Esc',
-    'CommandOrControl+Tab',
-    'Win+D',
-    'Win+M',
-    'Win+Tab'
   ];
 
   shortcuts.forEach(shortcut => {
@@ -98,8 +84,7 @@ async function createWindow() {
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.setVisibleOnAllWorkspaces(true);
   mainWindow.setSkipTaskbar(true);
-
-  // Prevent display sleep
+  mainWindow.setKiosk(true);
   mainWindow.setContentProtection(true);
   
   // Handle window blur
@@ -107,6 +92,19 @@ async function createWindow() {
     if (!app.isQuitting) {
       mainWindow.focus();
     }
+  });
+
+  // Handle minimize attempts
+  mainWindow.on('minimize', (e) => {
+    e.preventDefault();
+    mainWindow.restore();
+    mainWindow.focus();
+  });
+
+  // Handle maximize attempts
+  mainWindow.on('maximize', (e) => {
+    e.preventDefault();
+    mainWindow.focus();
   });
 }
 
@@ -122,6 +120,11 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+// Clean up shortcuts on quit
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 // IPC handlers
