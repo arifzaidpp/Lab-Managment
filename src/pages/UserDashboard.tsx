@@ -2,25 +2,39 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useSession } from '../hooks/useSession';
 import { useAuthStore } from '../store/auth';
+import { usePurposes } from '../hooks/usePurposes';
 import FloatingTimer from '../components/FloatingTimer';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Volume2, VolumeX } from 'lucide-react';
+import { AlertTriangle, Volume2, VolumeX, Monitor } from 'lucide-react';
 
 export default function UserDashboard() {
   const { logout } = useAuth();
   const user = useAuthStore((state) => state.user);
   const { activeSession, startSession, endSession } = useSession();
+  const { purposes } = usePurposes();
   const [timeLeft, setTimeLeft] = useState(60);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [warningAudio] = useState(new Audio('/warning.mp3'));
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    if (!activeSession) {
-      startSession(user?.purpose || 'internet').catch(console.error);
-    }
-  }, []);
+    const initializeSession = async () => {
+      if (!activeSession && user) {
+        try {
+          // Get the first active purpose if none is specified
+          const defaultPurpose = purposes.find(p => p.active)?.name || 'internet';
+          await startSession(defaultPurpose);
+        } catch (error) {
+          console.error('Failed to start session:', error);
+        }
+      }
+      setIsInitializing(false);
+    };
+
+    initializeSession();
+  }, [activeSession, user, purposes, startSession]);
 
   const handleActivity = useCallback(() => {
     setLastActivity(Date.now());
@@ -87,8 +101,19 @@ export default function UserDashboard() {
     setSoundEnabled(!soundEnabled);
   };
 
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <Monitor className="h-12 w-12 mx-auto mb-4 animate-pulse" />
+          <p className="text-xl">Initializing session...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">
       {/* Sound Toggle Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -159,6 +184,25 @@ export default function UserDashboard() {
         )}
       </AnimatePresence>
 
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-6">
+          <h1 className="text-2xl font-bold text-white mb-4">Welcome, {user?.name}</h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+              <h2 className="text-lg font-semibold text-white mb-2">Session Info</h2>
+              <p className="text-blue-200">Time Remaining: {timeLeft} minutes</p>
+              <p className="text-blue-200">Purpose: {activeSession?.purpose}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+              <h2 className="text-lg font-semibold text-white mb-2">User Info</h2>
+              <p className="text-blue-200">Admission Number: {user?.admissionNumber}</p>
+              <p className="text-blue-200">Class: {user?.class}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* User Info Overlay */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -170,6 +214,6 @@ export default function UserDashboard() {
           <span className="font-medium">{user?.name}</span>
         </div>
       </motion.div>
-    </>
+    </div>
   );
 }
